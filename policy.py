@@ -1,3 +1,15 @@
+"""
+Original Policy Gradient only applies to discrete space
+Here we give a policy network for continuous space
+We achieve this by outputing the mean of a Gaussian distribution
+For the baseline case, we simply use N(mu,I) as the gaussian model
+"""
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import torch.nn.functional as F
 from cnn import ResNet
 class BaselineNet(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -10,8 +22,21 @@ class BaselineNet(nn.Module):
         self.fc3 = nn.Linear(64, action_dim)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
     def forward(self, s):
+        s = self.cnn(s)
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))
         s = self.fc3(s)  # hamiltonina
-        s = F.softmax(s)
-        return s # probability distribution
+        #s = F.softmax(s)
+        return s
+    def explore(self, s):
+        # add stochastic for exploration
+        a = self(s)
+        dist = torch.distributions.normal.Normal(a, 1.)
+        return dist.sample()
+
+    def log_prob(self, s, a):
+        # given state and action, output the prob of choosing that action
+        mean = self(s)
+        # we use std=1 for simplicity
+        dist = torch.distributions.normal.Normal(mean, 1.)
+        return dist.log_prob(a)

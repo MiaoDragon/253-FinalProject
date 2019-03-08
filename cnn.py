@@ -1,6 +1,11 @@
 """
 This implements the CNN part of the deep network
 """
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import torch.nn.functional as F
 class ResBlock(nn.Module):
     # reference:
     # https://github.com/kuangliu/pytorch-cifar/blob/master/models/googlenet.py
@@ -34,11 +39,16 @@ class ResBlock(nn.Module):
 class ResNet(nn.Module):
     def __init__(self, out_size):
         super(ResNet, self).__init__()
-        self.conv1 = ResBlock(in_channel=3, out_channel=16, kernel_size=3, stride=1, padding=0)
-        self.conv2 = ResBlock(in_channel=16, out_channel=64, kernel_size=3, stride=1, padding=0)
-        self.conv3 = ResBlock(in_channel=64, out_channel=64, kernel_size=3, stride=1, padding=0)
-        self.conv4 = ResBlock(in_channel=64, out_channel=16, kernel_size=3, stride=1, padding=0)
-        self.fc1 = nn.Linear(in_features=256, out_features=128)
+        self.conv1 = ResBlock(in_channel=3, out_channel=16, kernel=5, stride=1, padding=0)
+        self.conv2 = ResBlock(in_channel=16, out_channel=32, kernel=5, stride=1, padding=0)
+        self.conv3 = ResBlock(in_channel=32, out_channel=64, kernel=5, stride=1, padding=0)
+        self.conv4 = ResBlock(in_channel=64, out_channel=32, kernel=3, stride=1, padding=0)
+        self.conv5 = ResBlock(in_channel=32, out_channel=16, kernel=3, stride=1, padding=0)
+        self.conv6 = ResBlock(in_channel=16, out_channel=16, kernel=3, stride=1, padding=0)
+        self.conv7 = ResBlock(in_channel=16, out_channel=16, kernel=3, stride=1, padding=0)
+        self.conv8 = ResBlock(in_channel=16, out_channel=16, kernel=3, stride=1, padding=0)
+        self.conv9 = ResBlock(in_channel=16, out_channel=16, kernel=3, stride=1, padding=0)
+        self.fc1 = nn.Linear(in_features=82944, out_features=128)
         self.fc_bn1 = nn.BatchNorm1d(128)
         self.fc_a1 = nn.ReLU()
         self.fc2 = nn.Linear(in_features=128, out_features=out_size)
@@ -49,10 +59,20 @@ class ResNet(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
+        x = self.conv5(x)
+        x = self.conv6(x)
+        x = self.conv7(x)
+        x = self.conv8(x)
+        x = self.conv9(x)
+
+        x = x.view(len(x), -1)
+        #print(x.size())
         x = self.fc1(x)
-        x = self.fc_bn1(x)
+        if len(x) > 1:
+            x = self.fc_bn1(x)
         x = self.fc_a1(x)
         x = self.fc2(x)
-        x = self.fc_bn2(x)
+        if len(x) > 1:
+            x = self.fc_bn2(x)
         x = self.fc_a2(x)
         return x
