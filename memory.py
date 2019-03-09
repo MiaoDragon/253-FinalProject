@@ -41,14 +41,23 @@ class Memory():
             bt = b / len(exp)
             # compute is for entire trajectory (is: important sampling)
             log_is = 0.
+            states = []
+            actions = []
             for t in range(len(exp)):
                 (s,a,r,log_p) = exp[t]
-                log_is += net.log_prob(s, a) - log_p
+                states.append(s)
+                actions.append(a)
+            states = torch.stack(states)
+            actions = torch.tensor(actions)
+            log_probs = net.log_prob(states, actions)
+            for t in range(len(exp)):
+                _, _, _, log_p = exp[t]
+                log_is += log_probs[t] - log_p
             # treat the IS term as data, don't compute gradient w.r.t. it
             log_is = log_is.detach()
             for t in range(len(exp)-1,-1,-1):
                 (s,a,r,log_p) = exp[t]
-                net_log_prob = net.log_prob(s, a)
+                net_log_prob = log_probs[t]
                 R += r - bt
                 # future reward * current loglikelihood * past IS
                 sum_exp += net_log_prob * R * torch.exp(log_is)
