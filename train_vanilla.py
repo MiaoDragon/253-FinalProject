@@ -12,9 +12,19 @@ from scipy.misc import imresize
 def main(args):
     env = gym.make(args.env)
     #env = gym.make('CartPole-v0')
-    # here if action space is continuous, we try to discretize it
+    # cuda gpu
+    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        computing_device = torch.device("cuda")
+        print("CUDA is supported")
+    else: # Otherwise, train on the CPU
+        computing_device = torch.device("cpu")
+        print("CUDA NOT supported")
+
     action_mapping = []
     policyNet = BaselineNet(env.observation_space.shape[0], len(env.action_space.high))
+    policyNet = policyNet.to(computing_device)
+    policyNet.set_opt()
     memory = Memory(capacity=200)
     b = 0.   # we can use a weighted average to estimate b as latest ones are more closer to current policy
     i_episode = 0
@@ -41,6 +51,7 @@ def main(args):
             # change from H*W*C to C*H*W
             #obs = torch.FloatTensor(obs).permute(2,0,1).unsqueeze(0)
             obs = torch.FloatTensor(obs)
+            obs = obs.to(computing_device)
             action = policyNet.explore(obs)
             action = action[0]
             perform_action = [action.detach().data.cpu().numpy()]

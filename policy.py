@@ -36,7 +36,6 @@ class BaselineNet(nn.Module):
         a = self(s)
         dist = torch.distributions.normal.Normal(a, self.std)
         return dist.sample()
-
     def log_prob(self, s, a):
         # given state and action, output the prob of choosing that action
         mean = self(s).squeeze()
@@ -45,3 +44,5 @@ class BaselineNet(nn.Module):
         # a: B * action
         dist = torch.distributions.normal.Normal(mean, self.std)
         return dist.log_prob(a)
+    def set_opt(self, opt=optim.Adam(self.parameters(), lr=1e-3)):
+        self.opt = opt
