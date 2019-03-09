@@ -25,7 +25,7 @@ def main(args):
     policyNet = BaselineNet(env.observation_space.shape[0], len(env.action_space.high))
     policyNet = policyNet.to(computing_device)
     policyNet.set_opt()
-    memory = Memory(capacity=200, computing_device)
+    memory = Memory(capacity=200, computing_device=computing_device)
     b = 0.   # we can use a weighted average to estimate b as latest ones are more closer to current policy
     i_episode = 0
     reward_list = []
