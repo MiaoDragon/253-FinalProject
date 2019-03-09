@@ -44,5 +44,5 @@ class BaselineNet(nn.Module):
         # a: B * action
         dist = torch.distributions.normal.Normal(mean, self.std)
         return dist.log_prob(a)
-    def set_opt(self, opt=optim.Adam(self.parameters(), lr=1e-3)):
-        self.opt = opt
+    def set_opt(self, opt=optim.Adam):
+        self.opt = opt(self.parameters(), lr=1e-3)
