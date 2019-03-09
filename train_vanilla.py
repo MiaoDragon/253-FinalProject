@@ -10,7 +10,7 @@ import gym
 from scipy.misc import imresize
 #import scipy
 def main(args):
-    env = gym.make(args.env).unwrapped
+    env = gym.make(args.env)
     #env = gym.make('CartPole-v0')
     # here if action space is continuous, we try to discretize it
     action_mapping = []
@@ -44,12 +44,6 @@ def main(args):
             action = policyNet.explore(obs)
             action = action[0]
             perform_action = [action.detach().data.cpu().numpy()]
-            #if action[0] < -1.:
-            #    action[0] = -1.
-            #if action[1] < 0.:
-            #    action[1] = 0.
-            #if action[2] < 0.:
-            #    action[2] = 0.
             log_prob = policyNet.log_prob(obs, action)
             obs_next, reward, done, info = env.step(perform_action)
             R += reward
@@ -70,6 +64,9 @@ def main(args):
         # update std
         std = std - std_decay
         policyNet.update_std(std)
+        # save model after several epochs
+        #if i_episode % save_epi == 0:
+
     return reward_list
 
 
@@ -80,4 +77,4 @@ parser.add_argument('--max_epi', type=int, default=25000)
 parser.add_argument('--max_iter', type=int, default=200)
 args = parser.parse_args()
 reward_list = main(args)
-print(reward_list)
+#print(reward_list)
