@@ -9,11 +9,12 @@ import torch.optim as optim
 import numpy as np
 import torch.nn.functional as F
 class Memory():
-    def __init__(self, capacity):
+    def __init__(self, capacity, computing_device):
         self.capacity = capacity
         self.idx = 0
         self.memory = []
         self.b = 0.
+        self.computing_device = computing_device
     def remember(self, traj):
         # given new trajectory in the form [(s_t, a_t, r_t, log_p(a_t|s_t))]
         # add this into memory
@@ -49,6 +50,7 @@ class Memory():
                 actions.append(a)
             states = torch.stack(states)
             actions = torch.tensor(actions)
+            actions = actions.to(self.computing_device)
             log_probs = net.log_prob(states, actions)
             for t in range(len(exp)):
                 _, _, _, log_p = exp[t]
