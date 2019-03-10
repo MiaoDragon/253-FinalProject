@@ -8,10 +8,12 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import torch.nn.functional as F
+from rl_utility import *
 class Memory():
-    def __init__(self, capacity, computing_device):
+    def __init__(self, capacity, obs_num, computing_device):
         self.capacity = capacity
         self.idx = 0
+        self.obs_num = obs_num
         self.memory = []
         self.b = 0.
         self.computing_device = computing_device
@@ -45,8 +47,9 @@ class Memory():
             states = []
             actions = []
             for t in range(len(exp)):
-                (s,a,r,log_p) = exp[t]
-                states.append(s)
+                o, a, r, log_p = exp[t]
+                # stack observations into states
+                states.append(obs_to_state(self.obs_num, o, exp[:t])) # :t actually uses past exps
                 actions.append(a)
             states = torch.stack(states)
             actions = torch.tensor(actions)
@@ -58,7 +61,7 @@ class Memory():
             # treat the IS term as data, don't compute gradient w.r.t. it
             log_is = log_is.detach()
             for t in range(len(exp)-1,-1,-1):
-                (s,a,r,log_p) = exp[t]
+                (o, a, r, log_p) = exp[t]
                 net_log_prob = log_probs[t]
                 R += r - bt
                 # future reward * current loglikelihood * past IS

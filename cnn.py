@@ -55,6 +55,7 @@ class ResNet(nn.Module):
         self.fc_bn2 = nn.BatchNorm1d(out_size)
         self.fc_a2 = nn.ReLU()
     def forward(self, x):
+        # x of size: B * S * W * H
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)

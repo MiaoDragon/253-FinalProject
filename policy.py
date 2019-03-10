@@ -24,6 +24,7 @@ class BaselineNet(nn.Module):
         self.std = std
     def forward(self, s):
         #s = self.cnn(s)
+        s = s.view(len(s), -1)  # concatenate obs in Pandulum example
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))
         s = self.fc3(s)  # hamiltonina
@@ -44,5 +45,5 @@ class BaselineNet(nn.Module):
         # a: B * action
         dist = torch.distributions.normal.Normal(mean, self.std)
         return dist.log_prob(a)
-    def set_opt(self, opt=optim.Adam):
-        self.opt = opt(self.parameters(), lr=1e-3)
+    def set_opt(self, opt=optim.Adam, lr=1e-2):
+        self.opt = opt(self.parameters(), lr=lr)
