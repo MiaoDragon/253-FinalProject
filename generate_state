@@ -1,0 +1,23 @@
+import random
+
+
+def generate_state(state_number, obs_list, mode):
+    # state_number is how many observation we want to use as state
+    # obs_list is the list of observation
+    # if mode is 'sequence', we put the last few observation as state
+    # if mode is random, we put the last one and randomly selected other ones into state
+    # the output is a iterator
+    state = []
+    length = len(obs_list)
+    if mode == 'sequence':
+        for ii in range(state_number):
+            state.append(obs_list[length - 1 - ii])
+    elif mode == 'random':
+        state.append(obs_list[-1])
+        seq = random.sample(list(range(length - 1)), state_number - 1)
+        seq.sort(reverse=True)
+        for ii in range(state_number - 1):
+            state.append(obs_list[seq[ii]])
+    # convert into iterator
+    state = (s for s in state)
+    return state
