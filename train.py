@@ -91,6 +91,8 @@ def main(args):
         # update std
         std = std - std_decay
         policyNet.update_std(std)
+        # print the thing
+        sys.stdout.flush()
         # save model after several epochs
         if i_episode % args.save_epi == 0:
             save_state(policyNet, policyNet.opt, epi_reward, train_loss, seed, args.model_path)
