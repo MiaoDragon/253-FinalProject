@@ -42,7 +42,7 @@ def main(args):
     policyNet.set_opt(lr=args.learning_rate)
     if os.path.exists(args.model_path):
         print('loading optimizer state...')
-        load_opt_state(policy.opt, args.model_path)
+        load_opt_state(policyNet.opt, args.model_path)
         old_epi_reward, old_train_loss = load_loss(args.model_path)
         epi_reward += old_epi_reward
         train_loss += old_train_loss
@@ -70,6 +70,7 @@ def main(args):
             state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
             action = policyNet.explore(state)
             action = action[0]
+            print(action)
             perform_action = action.detach().data.cpu().numpy()
             log_prob = policyNet.log_prob(state, action)
             obs_next, reward, done, info = env.step(perform_action)
