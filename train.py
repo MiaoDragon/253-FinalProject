@@ -56,6 +56,8 @@ def main(args):
     std_decay = (start_std - final_std) / std_decay_epi
     std = start_std
     policyNet.update_std(std)
+    for param in policyNet.parameters():
+        print(param)
     # may consider adding random generation of data
     for i_episode in range(args.max_epi):
         obs = env.reset()
