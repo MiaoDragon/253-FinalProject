@@ -12,10 +12,10 @@ import numpy as np
 import torch.nn.functional as F
 from cnn import ResNet
 class BaselineNet(nn.Module):
-    def __init__(self, state_dim, action_dim, std=1.):
+    def __init__(self, obs_num, state_dim, action_dim, std=1.):
         super(BaselineNet, self).__init__()
         # cnn layer for state extraction
-        self.cnn = ResNet(state_dim)
+        self.cnn = ResNet(in_channel=obs_num, out_size=state_dim)
         # three layer MLP
         self.fc1 = nn.Linear(state_dim, 32)
         self.fc2 = nn.Linear(32, 64)
@@ -23,7 +23,7 @@ class BaselineNet(nn.Module):
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
         self.std = std
     def forward(self, s):
-        #s = self.cnn(s)
+        s = self.cnn(s)
         s = s.view(len(s), -1)  # concatenate obs in Pandulum example
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))

@@ -12,6 +12,7 @@ import random
 from sl_utility import *
 from rl_utility import *
 import sys
+import cv2
 def main(args):
     seed = args.seed
     # ----- load seed when there is saved one -----
@@ -34,7 +35,7 @@ def main(args):
         computing_device = torch.device("cpu")
         print("CUDA NOT supported")
     # ----- model & optimizer ------
-    policyNet = BaselineNet(args.obs_num*env.observation_space.shape[0], len(env.action_space.high))
+    policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high))
     if os.path.exists(args.model_path):
         print('loading previous model...')
         load_net_state(policyNet, args.model_path)
@@ -64,7 +65,9 @@ def main(args):
         R = 0.
         exp = []
         for i in range(args.max_iter):
-            #obs = preprocess(obs)  # for image, use this
+            print(obs.shape)
+
+            obs = preprocess(obs)  # for image, use this
             obs = torch.FloatTensor(obs)
             obs = obs.to(computing_device)
             state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
@@ -74,6 +77,8 @@ def main(args):
             perform_action = action.detach().data.cpu().numpy()
             log_prob = policyNet.log_prob(state, action)
             obs_next, reward, done, info = env.step(perform_action)
+            cv2.imshow('hi', obs_next)
+            cv2.waitKey(0)
             R += reward
             obs = obs.detach()
             exp.append( (obs, action, reward, log_prob) )
@@ -103,7 +108,7 @@ def main(args):
 
 parser = argparse.ArgumentParser()
 #parser.add_argument('--env', type=str, default='CarRacing-v0')
-parser.add_argument('--env', type=str, default='Pendulum-v0')
+parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--max_epi', type=int, default=50000)
 parser.add_argument('--max_iter', type=int, default=1000)
 parser.add_argument('--save_epi', type=int, default=500)
