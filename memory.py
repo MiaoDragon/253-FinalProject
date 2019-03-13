@@ -57,7 +57,8 @@ class Memory():
             log_probs = net.log_prob(states, actions)
             for t in range(len(exp)):
                 _, _, _, log_p = exp[t]
-                log_is += log_probs[t] - log_p
+                # added clipping to avoid gradient explosure
+                log_is += log_probs[t] - max(log_p, np.log(1e-5))
             # treat the IS term as data, don't compute gradient w.r.t. it
             log_is = log_is.detach()
             for t in range(len(exp)-1,-1,-1):
@@ -66,7 +67,7 @@ class Memory():
                 R += r - bt
                 # future reward * current loglikelihood * past IS
                 sum_exp += net_log_prob * R * torch.exp(log_is)
-                log_is -= net_log_prob - log_p
+                log_is -= net_log_prob - max(log_p, np.log(1e-5))
                 # the predicted prob is treated as constant
                 log_is = log_is.detach()
             sum_exps += sum_exp
