@@ -70,7 +70,7 @@ def main(args):
             state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
             action = policyNet.explore(state)
             action = action[0]
-            print(action)
+            #print(action)
             perform_action = action.detach().data.cpu().numpy()
             log_prob = policyNet.log_prob(state, action)
             obs_next, reward, done, info = env.step(perform_action)
