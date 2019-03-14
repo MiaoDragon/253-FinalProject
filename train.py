@@ -36,9 +36,10 @@ def main(args):
         print("CUDA NOT supported")
     # ----- model & optimizer ------
     if args.use_cnn:
-        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high))
+        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high), use_cnn=True)
     else:
-        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0], action_dim=len(env.action_space.high))
+        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0], \
+                                action_dim=len(env.action_space.high), use_cnn=False)
     if os.path.exists(args.model_path):
         print('loading previous model...')
         load_net_state(policyNet, args.model_path)
