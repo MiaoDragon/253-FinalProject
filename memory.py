@@ -88,10 +88,10 @@ class Memory():
             # ref: https://arxiv.org/pdf/1707.06347.pdf
             importance_w[importance_w > 1+clip_factor] = 1+clip_factor
             importance_w[importance_w < 1-clip_factor] = 1-clip_factor
-            print('log probability:')
-            print(log_probs)
-            print('importance weight:')
-            print(importance_w)
+            #print('log probability:')
+            #print(log_probs)
+            #print('importance weight:')
+            #print(importance_w)
             # take the lower bound as loss
             exp_loss = (log_probs * As * importance_w).sum()
             exp_loss = exp_loss / len(exp)  # normalize to give smaller loss
