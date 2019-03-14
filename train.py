@@ -12,7 +12,6 @@ import random
 from sl_utility import *
 from rl_utility import *
 import sys
-import cv2
 def main(args):
     seed = args.seed
     # ----- load seed when there is saved one -----
