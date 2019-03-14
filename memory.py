@@ -81,13 +81,13 @@ class Memory():
             log_is = (log_probs - past_log_p).detach()
 
             log_is[log_is>np.log(10.)] = np.log(10.)  # clipping
-            is = torch.exp(log_is)
+            imortance_w = torch.exp(log_is)
             # clipping is
             # ref: https://arxiv.org/pdf/1707.06347.pdf
-            is[is > 1+clip_factor] = 1+clip_factor
-            is[is < 1-clip_factor] = 1-clip_factor
+            imortance_w[imortance_w > 1+clip_factor] = 1+clip_factor
+            imortance_w[imortance_w < 1-clip_factor] = 1-clip_factor
             # take the lower bound as loss
-            exp_loss = torch.min((log_probs * As * is).sum(), (log_probs * As * torch.exp(log_is)).sum())
+            exp_loss = torch.min((log_probs * As * imortance_w).sum(), (log_probs * As * torch.exp(log_is)).sum())
             exp_loss = exp_loss / len(exp)  # normalize to give smaller loss
             sum_exps += exp_loss
             # print log_probs, log_is to see where it went wrong
