@@ -23,10 +23,11 @@ class BaselineNet(nn.Module):
         # three layer MLP
         self.fc1 = nn.Linear(state_dim, 32)
         self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, action_dim)
+        self.fc3 = nn.Linear(64, 2*action_dim)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
         self.std = std
-
+        self.softplus = nn.Softplus()
+        self.action_dim = action_dim
     def forward(self, s):
         if self.use_cnn:
             s = self.cnn(s)
@@ -34,22 +35,38 @@ class BaselineNet(nn.Module):
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))
         s = self.fc3(s)  # hamiltonina
+        s = s.view(len(s), action_dim, 2)
         #s = F.softmax(s)
+        # this to make sure the output is larger than 1
+        s = self.softplus(s)
         return s
     def update_std(self, std):
         self.std = std
+    def distribution(self, s):
+        # return the distribution obtained from input
+        s = self(s)
+        alpha = s[...,0]
+        beta = s[...,1]
+        # added softplus
+        dist = torch.distributions.beta.Beta(alpha, beta)
+        return dist        
     def explore(self, s):
         # add stochastic for exploration
-        a = self(s)
-        dist = torch.distributions.normal.Normal(a, self.std)
+        s = self(s)
+        alpha = s[...,0]
+        beta = s[...,1]
+        # added softplus
+        dist = torch.distributions.beta.Beta(alpha, beta)
         return dist.sample()
     def log_prob(self, s, a):
         # given state and action, output the prob of choosing that action
         mean = self(s)
+        alpha = s[...,0]
+        beta = s[...,1]
         # we use std=1 for simplicity
         # mean: B * Action_shape
         # a: B * action
-        dist = torch.distributions.normal.Normal(mean, self.std)
+        dist = torch.distributions.beta.Beta(alpha, beta)
         return dist.log_prob(a)
     def set_opt(self, opt=optim.Adam, lr=1e-2):
         self.opt = opt(self.parameters(), lr=lr)

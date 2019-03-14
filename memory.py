@@ -75,8 +75,10 @@ class Memory():
             actions = actions.to(self.computing_device)
             past_log_p = past_log_p.to(self.computing_device)
             As = As.to(self.computing_device)
+            dist = net.distribution(states)
             # sum probabiliies to obtain joint probaility
-            log_probs = net.log_prob(states, actions).sum(dim=1)
+            log_probs = dist.log_prob(actions).sum(dim=1)
+            #log_probs = net.log_prob(states, actions).sum(dim=1)
 
             log_is = (log_probs - past_log_p).detach()
 
@@ -86,10 +88,10 @@ class Memory():
             # ref: https://arxiv.org/pdf/1707.06347.pdf
             importance_w[importance_w > 1+clip_factor] = 1+clip_factor
             importance_w[importance_w < 1-clip_factor] = 1-clip_factor
-            print('log probability:')
-            print(log_probs)
-            print('importance weight:')
-            print(importance_w)
+            #print('log probability:')
+            #print(log_probs)
+            #print('importance weight:')
+            #print(importance_w)
             # take the lower bound as loss
             exp_loss = (log_probs * As * importance_w).sum()
             exp_loss = exp_loss / len(exp)  # normalize to give smaller loss
