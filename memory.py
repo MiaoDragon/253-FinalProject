@@ -37,7 +37,7 @@ class Memory():
     def loss_subsample(self, net):
         # this use sub sample to compute loss
         pass
-    def loss_traj(self, net, b, clip_factor):
+    def loss_traj(self, net, b, clip_upper, clip_lower):
         # this computes loss along each trajectory
         #self.compute_b()
         #b = self.b
@@ -86,8 +86,8 @@ class Memory():
             importance_w = torch.exp(log_is)
             # clipping is
             # ref: https://arxiv.org/pdf/1707.06347.pdf
-            importance_w[importance_w > 1+clip_factor] = 1+clip_factor
-            importance_w[importance_w < 1-clip_factor] = 1-clip_factor
+            importance_w[importance_w > 1+clip_upper] = 1+clip_upper
+            importance_w[importance_w < 1-clip_lower] = 1-clip_lower
             #print('log probability:')
             #print(log_probs)
             #print('importance weight:')
