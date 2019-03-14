@@ -35,7 +35,7 @@ class BaselineNet(nn.Module):
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))
         s = self.fc3(s)  # hamiltonina
-        s = s.view(len(s), action_dim, 2)
+        s = s.view(len(s), self.action_dim, 2)
         #s = F.softmax(s)
         # this to make sure the output is larger than 1
         s = self.softplus(s)
@@ -49,7 +49,7 @@ class BaselineNet(nn.Module):
         beta = s[...,1]
         # added softplus
         dist = torch.distributions.beta.Beta(alpha, beta)
-        return dist        
+        return dist
     def explore(self, s):
         # add stochastic for exploration
         s = self(s)
