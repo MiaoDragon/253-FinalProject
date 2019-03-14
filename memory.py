@@ -84,5 +84,10 @@ class Memory():
             log_is[log_is>np.log(10.)] = np.log(10.)  # clipping
 
             sum_exps += (log_probs * As * torch.exp(log_is)).sum()
+            # print log_probs, log_is to see where it went wrong
+            print('log_probs:')
+            print(log_probs)
+            print('log_is:')
+            print(log_is)
             # convert reward to loss by inserting -
         return -sum_exps / len(self.memory)
