@@ -97,7 +97,7 @@ def main(args):
         policyNet.zero_grad()
         # when episode 1 b will be equal to R, which leads to 0 J, not good
         # also pass the average reward
-        J = memory.loss_traj(policyNet, total_reward / (i_episode+1))
+        J = memory.loss_traj(policyNet, total_reward / (i_episode+1), args.clip_factor)
         print('loss: %f' % (J))
         J.backward()
         policyNet.opt.step()
@@ -130,5 +130,6 @@ parser.add_argument('--start_std', type=float, default=5.)
 parser.add_argument('--final_std', type=float, default=0.2)
 parser.add_argument('--std_decay_epi_ratio', type=float, default=0.7)
 parser.add_argument('--use_cnn', type=int, default=True)
+parser.add_argument('--clip_factor', type=float, default=0.2, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 args = parser.parse_args()
 reward_list = main(args)

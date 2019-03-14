@@ -34,11 +34,10 @@ class Memory():
                 b += exp[2]
         self.b = b / len(self.memory)
 
-
     def loss_subsample(self, net):
         # this use sub sample to compute loss
         pass
-    def loss_traj(self, net, b):
+    def loss_traj(self, net, b, clip_factor):
         # this computes loss along each trajectory
         #self.compute_b()
         #b = self.b
@@ -82,12 +81,19 @@ class Memory():
             log_is = (log_probs - past_log_p).detach()
 
             log_is[log_is>np.log(10.)] = np.log(10.)  # clipping
-
-            sum_exps += (log_probs * As * torch.exp(log_is)).sum()
+            is = torch.exp(log_is)
+            # clipping is
+            # ref: https://arxiv.org/pdf/1707.06347.pdf
+            is[is > 1+clip_factor] = 1+clip_factor
+            is[is < 1-clip_factor] = 1-clip_factor
+            # take the lower bound as loss
+            exp_loss = torch.min((log_probs * As * is).sum(), (log_probs * As * torch.exp(log_is)).sum())
+            exp_loss = exp_loss / len(exp)  # normalize to give smaller loss
+            sum_exps += exp_loss
             # print log_probs, log_is to see where it went wrong
-            print('log_probs:')
-            print(log_probs)
-            print('log_is:')
-            print(log_is)
+            #print('log_probs:')
+            #print(log_probs)
+            #print('log_is:')
+            #print(log_is)
             # convert reward to loss by inserting -
         return -sum_exps / len(self.memory)
