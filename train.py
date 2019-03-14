@@ -24,8 +24,8 @@ def main(args):
     random.seed(seed)
     env = gym.make(args.env)
     # obtain action bound
-    upper_action = torch.from_numpy(env.action_space.high)
-    lower_action = torch.from_numpy(env.action_space.low)
+    upper_action = env.action_space.high
+    lower_action = env.action_space.low
     # this is needed when we unnormalize the network output [0,1] to this
     # ----- metrics -----
     epi_reward = []
