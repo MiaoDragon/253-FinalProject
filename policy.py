@@ -37,8 +37,7 @@ class BaselineNet(nn.Module):
         s = s.view(len(s), self.action_dim, 2)
         #s = F.softmax(s)
         # this to make sure the output is larger than 1
-        s = self.softplus(s)
-        print(s)
+        s = self.softplus(s) + 1
         return s
 
     def distribution(self, s):
