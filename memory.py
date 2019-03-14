@@ -87,7 +87,7 @@ class Memory():
             importance_w[importance_w > 1+clip_factor] = 1+clip_factor
             importance_w[importance_w < 1-clip_factor] = 1-clip_factor
             # take the lower bound as loss
-            exp_loss = log_probs * As * importance_w).sum()
+            exp_loss = (log_probs * As * importance_w).sum()
             exp_loss = exp_loss / len(exp)  # normalize to give smaller loss
             sum_exps += exp_loss
             # print log_probs, log_is to see where it went wrong
