@@ -70,8 +70,8 @@ def main(args):
         exp = []
         for i in range(args.max_iter):
             print('iteration: %d' % (i))
-            obs = env.render(mode='rgb_array')
             if args.use_cnn:
+                obs = env.render(mode='rgb_array')
                 obs = preprocess(obs)  # for image, use this
             #cv2.imshow('hi', obs)
             obs = torch.FloatTensor(obs)
