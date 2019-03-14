@@ -137,7 +137,7 @@ parser.add_argument('--final_std', type=float, default=0.2)
 parser.add_argument('--std_decay_epi_ratio', type=float, default=0.7)
 parser.add_argument('--use_cnn', type=int, default=True)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
-parser.add_argument('--clip_lower', type=float, default=0.1, help='this makes sure the importance factor is not smaller than 0')
+parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
 
 args = parser.parse_args()
 reward_list = main(args)
