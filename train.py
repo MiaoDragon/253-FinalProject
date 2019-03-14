@@ -70,7 +70,7 @@ def main(args):
         R = 0.
         exp = []
         for i in range(args.max_iter):
-            print('iteration: %d' % (i))
+            #print('iteration: %d' % (i))
             if args.use_cnn:
                 obs = env.render(mode='rgb_array')
                 obs = preprocess(obs)  # for image, use this
@@ -98,6 +98,7 @@ def main(args):
         # when episode 1 b will be equal to R, which leads to 0 J, not good
         # also pass the average reward
         J = memory.loss_traj(policyNet, total_reward / (i_episode+1))
+        print('loss: %f' % (J))
         J.backward()
         policyNet.opt.step()
         # save reward and loss
