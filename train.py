@@ -23,6 +23,10 @@ def main(args):
     np.random.seed(seed)
     random.seed(seed)
     env = gym.make(args.env)
+    # obtain action bound
+    upper_action = torch.from_numpy(env.action_space.high)
+    lower_action = torch.from_numpy(env.action_space.low)
+    # this is needed when we unnormalize the network output [0,1] to this
     # ----- metrics -----
     epi_reward = []
     train_loss = []
@@ -80,8 +84,10 @@ def main(args):
             state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
             action = policyNet.explore(state)
             action = action[0]
+            # unnormalize the action by bound
             #print(action)
             perform_action = action.detach().data.cpu().numpy()
+            perform_action = perform_action * (upper_action - lower_action) + lower_action
             log_prob = policyNet.log_prob(state, action)
             obs_next, reward, done, info = env.step(perform_action)
             R += reward
