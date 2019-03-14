@@ -12,6 +12,7 @@ import random
 from sl_utility import *
 from rl_utility import *
 import sys
+import cv2
 def main(args):
     seed = args.seed
     # ----- load seed when there is saved one -----
@@ -64,8 +65,10 @@ def main(args):
         R = 0.
         exp = []
         for i in range(args.max_iter):
+            print('iteration: %d' % (i))
             obs = env.render(mode='rgb_array')
             obs = preprocess(obs)  # for image, use this
+            cv2.imshow('hi', obs)
             obs = torch.FloatTensor(obs)
             obs = obs.to(computing_device)
             state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
@@ -105,16 +108,16 @@ def main(args):
 parser = argparse.ArgumentParser()
 #parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--env', type=str, default='CarRacing-v0')
-parser.add_argument('--max_epi', type=int, default=50000)
-parser.add_argument('--max_iter', type=int, default=5000)
-parser.add_argument('--save_epi', type=int, default=500)
-parser.add_argument('--memory_capacity', type=int, default=1000)
+parser.add_argument('--max_epi', type=int, default=1000)
+parser.add_argument('--max_iter', type=int, default=1000)
+parser.add_argument('--save_epi', type=int, default=100)
+parser.add_argument('--memory_capacity', type=int, default=100)
 parser.add_argument('--learning_rate', type=float, default=0.01)
 parser.add_argument('--obs_num', type=int, default=4)
 parser.add_argument('--model_path', type=str, default='../model/baseline.pkl')
 parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--start_std', type=float, default=5.)
-parser.add_argument('--final_std', type=float, default=0.1)
+parser.add_argument('--final_std', type=float, default=0.2)
 parser.add_argument('--std_decay_epi_ratio', type=float, default=0.7)
 args = parser.parse_args()
 reward_list = main(args)

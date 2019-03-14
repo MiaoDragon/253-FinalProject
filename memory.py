@@ -52,13 +52,14 @@ class Memory():
                 states.append(obs_to_state(self.obs_num, o, exp[:t])) # :t actually uses past exps
                 actions.append(a)
             states = torch.stack(states)
-            actions = torch.tensor(actions)
+            actions = torch.stack(actions)
             actions = actions.to(self.computing_device)
-            log_probs = net.log_prob(states, actions)
+            # sum probabiliies to obtain joint probaility
+            log_probs = net.log_prob(states, actions).sum(dim=1)
             for t in range(len(exp)):
                 _, _, _, log_p = exp[t]
                 # added clipping to avoid gradient explosure
-                log_is += log_probs[t] - max(log_p, np.log(1e-5))
+                log_is += log_probs[t] - max(log_p.detach().sum(), np.log(1e-5))
             # treat the IS term as data, don't compute gradient w.r.t. it
             log_is = log_is.detach()
             for t in range(len(exp)-1,-1,-1):
@@ -67,7 +68,7 @@ class Memory():
                 R += r - bt
                 # future reward * current loglikelihood * past IS
                 sum_exp += net_log_prob * R * torch.exp(log_is)
-                log_is -= net_log_prob - max(log_p, np.log(1e-5))
+                log_is -= net_log_prob - max(log_p.detach().sum(), np.log(1e-5))
                 # the predicted prob is treated as constant
                 log_is = log_is.detach()
             sum_exps += sum_exp
