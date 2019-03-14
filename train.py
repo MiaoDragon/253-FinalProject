@@ -12,7 +12,7 @@ import random
 from sl_utility import *
 from rl_utility import *
 import sys
-import cv2
+#import cv2
 def main(args):
     seed = args.seed
     # ----- load seed when there is saved one -----
@@ -35,7 +35,10 @@ def main(args):
         computing_device = torch.device("cpu")
         print("CUDA NOT supported")
     # ----- model & optimizer ------
-    policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high))
+    if args.use_cnn:
+        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high))
+    else:
+        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0], action_dim=len(env.action_space.high))
     if os.path.exists(args.model_path):
         print('loading previous model...')
         load_net_state(policyNet, args.model_path)
@@ -57,6 +60,7 @@ def main(args):
     std_decay = (start_std - final_std) / std_decay_epi
     std = start_std
     policyNet.update_std(std)
+    total_reward = 0.
     # may consider adding random generation of data
     for i_episode in range(args.max_epi):
         obs = env.reset()
@@ -67,8 +71,9 @@ def main(args):
         for i in range(args.max_iter):
             print('iteration: %d' % (i))
             obs = env.render(mode='rgb_array')
-            obs = preprocess(obs)  # for image, use this
-            cv2.imshow('hi', obs)
+            if args.use_cnn:
+                obs = preprocess(obs)  # for image, use this
+            #cv2.imshow('hi', obs)
             obs = torch.FloatTensor(obs)
             obs = obs.to(computing_device)
             state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
@@ -80,15 +85,18 @@ def main(args):
             obs_next, reward, done, info = env.step(perform_action)
             R += reward
             obs = obs.detach()
-            exp.append( (obs, action, reward, log_prob) )
+            # sum each dim of log_prob to get joint prob
+            exp.append( [obs, action, reward, log_prob.detach().data.sum(), None] )
             obs = obs_next
             if done:
                 break
         memory.remember(exp)
         print('reward for episode %d: %f' % (i_episode, R))
+        total_reward += R
         policyNet.zero_grad()
         # when episode 1 b will be equal to R, which leads to 0 J, not good
-        J = memory.loss(policyNet)
+        # also pass the average reward
+        J = memory.loss_traj(policyNet, total_reward / (i_episode+1))
         J.backward()
         policyNet.opt.step()
         # save reward and loss
@@ -119,5 +127,6 @@ parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--start_std', type=float, default=5.)
 parser.add_argument('--final_std', type=float, default=0.2)
 parser.add_argument('--std_decay_epi_ratio', type=float, default=0.7)
+parser.add_argument('--use_cnn', type=int, default=True)
 args = parser.parse_args()
 reward_list = main(args)

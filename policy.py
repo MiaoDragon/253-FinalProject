@@ -12,18 +12,24 @@ import numpy as np
 import torch.nn.functional as F
 from cnn import ResNet
 class BaselineNet(nn.Module):
-    def __init__(self, obs_num, state_dim, action_dim, std=1.):
+    def __init__(self, obs_num, state_dim, action_dim, use_cnn=True, std=1.):
         super(BaselineNet, self).__init__()
         # cnn layer for state extraction
-        self.cnn = ResNet(in_channel=obs_num, out_size=state_dim)
+        self.use_cnn = use_cnn
+        if self.use_cnn:
+            self.cnn = ResNet(in_channel=obs_num, out_size=state_dim)
+        else:
+            self.cnn = None
         # three layer MLP
         self.fc1 = nn.Linear(state_dim, 32)
         self.fc2 = nn.Linear(32, 64)
         self.fc3 = nn.Linear(64, action_dim)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
         self.std = std
+
     def forward(self, s):
-        s = self.cnn(s)
+        if self.use_cnn:
+            s = self.cnn(s)
         s = s.view(len(s), -1)  # concatenate obs in Pandulum example
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))
@@ -39,7 +45,7 @@ class BaselineNet(nn.Module):
         return dist.sample()
     def log_prob(self, s, a):
         # given state and action, output the prob of choosing that action
-        mean = self(s).squeeze()
+        mean = self(s)
         # we use std=1 for simplicity
         # mean: B * Action_shape
         # a: B * action

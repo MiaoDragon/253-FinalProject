@@ -1,7 +1,8 @@
 """
 this implements the memory recording past trajectories
-each memory records: (s_t, a_t, r_t, log_p(a_t|s_t))
+each memory records: (s_t, a_t, r_t, log_p(a_t|s_t), Q)
 memory is a circular array of array
+Q is None if not calculated, otherwise a floating point value
 """
 import torch
 import torch.nn as nn
@@ -33,9 +34,14 @@ class Memory():
                 b += exp[2]
         self.b = b / len(self.memory)
 
-    def loss(self, net):
-        self.compute_b()
-        b = self.b
+
+    def loss_subsample(self, net):
+        # this use sub sample to compute loss
+        pass
+    def loss_traj(self, net, b):
+        # this computes loss along each trajectory
+        #self.compute_b()
+        #b = self.b
         sum_exps = 0.
         for exp_i in range(len(self.memory)):
             exp = self.memory[exp_i]
@@ -46,31 +52,37 @@ class Memory():
             log_is = 0.
             states = []
             actions = []
+            past_log_p = []
+            As = []
+            # check if q is None, if so, then calculate q for each exp
+            if exp[0][4] is None:
+                for t in range(len(exp)-1,-1,-1):
+                    o, a, r, log_p, A = exp[t]
+                    R += r - bt # advantage value
+                    exp[t][4] = R
             for t in range(len(exp)):
-                o, a, r, log_p = exp[t]
+                o, a, r, log_p, A = exp[t]
                 # stack observations into states
                 states.append(obs_to_state(self.obs_num, o, exp[:t])) # :t actually uses past exps
                 actions.append(a)
+                past_log_p.append(log_p)
+                As.append(A)
+
             states = torch.stack(states)
             actions = torch.stack(actions)
+            past_log_p = torch.stack(past_log_p)
+            As = torch.tensor(As)
+            states = states.to(self.computing_device)
             actions = actions.to(self.computing_device)
+            past_log_p = past_log_p.to(self.computing_device)
+            As = As.to(self.computing_device)
             # sum probabiliies to obtain joint probaility
             log_probs = net.log_prob(states, actions).sum(dim=1)
-            for t in range(len(exp)):
-                _, _, _, log_p = exp[t]
-                # added clipping to avoid gradient explosure
-                log_is += log_probs[t] - max(log_p.detach().sum(), np.log(1e-5))
-            # treat the IS term as data, don't compute gradient w.r.t. it
-            log_is = log_is.detach()
-            for t in range(len(exp)-1,-1,-1):
-                (o, a, r, log_p) = exp[t]
-                net_log_prob = log_probs[t]
-                R += r - bt
-                # future reward * current loglikelihood * past IS
-                sum_exp += net_log_prob * R * torch.exp(log_is)
-                log_is -= net_log_prob - max(log_p.detach().sum(), np.log(1e-5))
-                # the predicted prob is treated as constant
-                log_is = log_is.detach()
-            sum_exps += sum_exp
+
+            log_is = (log_probs - past_log_p).detach()
+
+            log_is[log_is>np.log(10.)] = np.log(10.)  # clipping
+
+            sum_exps += (log_probs * As * torch.exp(log_is)).sum()
             # convert reward to loss by inserting -
         return -sum_exps / len(self.memory)
