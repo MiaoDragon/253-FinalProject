@@ -65,8 +65,7 @@ def main(args):
         R = 0.
         exp = []
         for i in range(args.max_iter):
-            print(obs.shape)
-
+            obs = env.render(mode='rgb_array')
             obs = preprocess(obs)  # for image, use this
             obs = torch.FloatTensor(obs)
             obs = obs.to(computing_device)
@@ -77,8 +76,6 @@ def main(args):
             perform_action = action.detach().data.cpu().numpy()
             log_prob = policyNet.log_prob(state, action)
             obs_next, reward, done, info = env.step(perform_action)
-            cv2.imshow('hi', obs_next)
-            cv2.waitKey(0)
             R += reward
             obs = obs.detach()
             exp.append( (obs, action, reward, log_prob) )
@@ -110,7 +107,7 @@ parser = argparse.ArgumentParser()
 #parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--max_epi', type=int, default=50000)
-parser.add_argument('--max_iter', type=int, default=1000)
+parser.add_argument('--max_iter', type=int, default=5000)
 parser.add_argument('--save_epi', type=int, default=500)
 parser.add_argument('--memory_capacity', type=int, default=1000)
 parser.add_argument('--learning_rate', type=float, default=0.01)

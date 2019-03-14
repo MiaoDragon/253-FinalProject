@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import cv2
+import scipy
 def obs_to_state(obs_num, obs, exp):
     # exp is a list of past experiences in the form (obs, action, reward, log_prob) up to previous time
     # each obs is a tensor
@@ -24,9 +25,9 @@ def obs_to_state(obs_num, obs, exp):
 
 def preprocess(obs):
     # obs is numpy array
-    #cv2.imshow('hi', obs)
-    #cv2.waitKey(1)
-    obs = obs[:int(350/400*obs.shape[0])]
-    obs = np.dot(obs[...,:3], [0.299, 0.587, 0.114])
-
+    # this works for 400x600 obs
+    obs = obs[:350]
+    obs = cv2.resize(obs, (96, 96))
+    #obs = obs[:int(350/400*obs.shape[0])]
+    obs = np.dot(obs[...,:3], [0.299, 0.587, 0.114]) / 255.
     return obs
