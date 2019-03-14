@@ -58,13 +58,6 @@ def main(args):
 
     memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device)
     # --- standard deviation for random sampling ---
-    start_std = args.start_std
-    final_std = args.final_std
-    std_decay_epi = args.max_epi * args.std_decay_epi_ratio
-    # linear decay of std
-    std_decay = (start_std - final_std) / std_decay_epi
-    std = start_std
-    policyNet.update_std(std)
     total_reward = 0.
     # may consider adding random generation of data
     for i_episode in range(args.max_epi):
@@ -110,9 +103,7 @@ def main(args):
         # save reward and loss
         epi_reward.append(R)
         train_loss.append(J.detach().data.item())
-        # update std
-        std = std - std_decay
-        policyNet.update_std(std)
+
         # print the thing
         sys.stdout.flush()
         # save model after several epochs
@@ -132,9 +123,6 @@ parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--obs_num', type=int, default=4)
 parser.add_argument('--model_path', type=str, default='../model/baseline.pkl')
 parser.add_argument('--seed', type=int, default=1)
-parser.add_argument('--start_std', type=float, default=5.)
-parser.add_argument('--final_std', type=float, default=0.2)
-parser.add_argument('--std_decay_epi_ratio', type=float, default=0.7)
 parser.add_argument('--use_cnn', type=int, default=True)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')

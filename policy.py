@@ -12,7 +12,7 @@ import numpy as np
 import torch.nn.functional as F
 from cnn import ResNet
 class BaselineNet(nn.Module):
-    def __init__(self, obs_num, state_dim, action_dim, use_cnn=True, std=1.):
+    def __init__(self, obs_num, state_dim, action_dim, use_cnn=True):
         super(BaselineNet, self).__init__()
         # cnn layer for state extraction
         self.use_cnn = use_cnn
@@ -25,7 +25,6 @@ class BaselineNet(nn.Module):
         self.fc2 = nn.Linear(32, 64)
         self.fc3 = nn.Linear(64, 2*action_dim)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
-        self.std = std
         self.softplus = nn.Softplus()
         self.action_dim = action_dim
     def forward(self, s):
@@ -40,8 +39,7 @@ class BaselineNet(nn.Module):
         # this to make sure the output is larger than 1
         s = self.softplus(s)
         return s
-    def update_std(self, std):
-        self.std = std
+
     def distribution(self, s):
         # return the distribution obtained from input
         s = self(s)
