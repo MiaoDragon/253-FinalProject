@@ -72,31 +72,37 @@ def main(args):
         r_list = []
         log_prob_list = []
         for i in range(args.max_iter):
-            #print('iteration: %d' % (i))
-            if args.use_cnn:
-                # obs = env.render(mode='state_pixels')
-                # obs = preprocess(obs)  # for image, use this
-                obs = obs[...,:3] @ [0.299, 0.587, 0.114] / 255.
-            #cv2.imshow('hi', obs)
-            obs = torch.FloatTensor(obs)
-            obs = obs.to(computing_device)
-            state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
-            action = policyNet.explore(state)
-            action = action[0]
-            # unnormalize the action by bound
-            #print(action)
-            perform_action = action.detach().data.cpu().numpy()
-            #perform_action = perform_action * (upper_action - lower_action) + lower_action
-            log_prob = policyNet.log_prob(state, action)
-            obs_next, reward, done, info = env.step(perform_action)
-            R += reward
-            obs = obs.detach()
-            # sum each dim of log_prob to get joint prob
-            obs_list.append(obs)
-            a_list.append(action)
-            r_list.append(reward)
-            log_prob_list.append(log_prob.detach().data.sum())
-            obs = obs_next
+            if i % args.frame_interval == 0:
+                #print('iteration: %d' % (i))
+                if args.use_cnn:
+                    # obs = env.render(mode='state_pixels')
+                    # obs = preprocess(obs)  # for image, use this
+                    obs = obs[...,:3] @ [0.299, 0.587, 0.114] / 255.
+                #cv2.imshow('hi', obs)
+                obs = torch.FloatTensor(obs)
+                obs = obs.to(computing_device)
+                state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
+                action = policyNet.explore(state)
+                action = action[0]
+                # unnormalize the action by bound
+                #print(action)
+                perform_action = action.detach().data.cpu().numpy()
+                #perform_action = perform_action * (upper_action - lower_action) + lower_action
+                log_prob = policyNet.log_prob(state, action)
+                obs_next, reward, done, info = env.step(perform_action)
+                R += reward
+                obs = obs.detach()
+                # sum each dim of log_prob to get joint prob
+                obs_list.append(obs)
+                a_list.append(action)
+                r_list.append(reward)
+                log_prob_list.append(log_prob.detach().data.sum())
+                obs = obs_next
+            else:
+                obs_next, reward, done, info = env.step(perform_action)
+                obs = obs_next
+                R += reward
+                r_list[-1] += reward
             if done:
                 break
         memory.remember(obs_list, a_list, r_list, log_prob_list, args.gamma)
@@ -137,5 +143,6 @@ parser.add_argument('--use_cuda', type=int, default=True)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
 parser.add_argument('--gamma', type=float, default=0.99)
+parser.add_argument('--frame_interval', type=int, default=4)
 args = parser.parse_args()
 reward_list = main(args)
