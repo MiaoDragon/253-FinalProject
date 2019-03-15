@@ -65,7 +65,10 @@ def main(args):
         # collect data using current policy
         # estimate the average reward on the go
         R = 0.
-        exp = []
+        obs_list = []
+        a_list = []
+        r_list = []
+        log_prob_list = []
         for i in range(args.max_iter):
             #print('iteration: %d' % (i))
             if args.use_cnn:
@@ -74,7 +77,7 @@ def main(args):
             #cv2.imshow('hi', obs)
             obs = torch.FloatTensor(obs)
             obs = obs.to(computing_device)
-            state = obs_to_state(args.obs_num, obs, exp).unsqueeze(0)
+            state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
             action = policyNet.explore(state)
             action = action[0]
             # unnormalize the action by bound
@@ -86,11 +89,14 @@ def main(args):
             R += reward
             obs = obs.detach()
             # sum each dim of log_prob to get joint prob
-            exp.append( [obs, action, reward, log_prob.detach().data.sum(), None] )
+            obs_list.append(obs)
+            a_list.append(action)
+            r_list.append(reward)
+            log_prob_list.append(log_prob.detach().data.sum())
             obs = obs_next
             if done:
                 break
-        memory.remember(exp)
+        memory.remember(obs_list, a_list, r_list, log_prob_list, args.gamma)
         print('reward for episode %d: %f' % (i_episode, R))
         total_reward += R
         policyNet.zero_grad()
@@ -126,6 +132,6 @@ parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--use_cnn', type=int, default=True)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
-
+parser.add_argument('--gamma', type=float, default=0.9)
 args = parser.parse_args()
 reward_list = main(args)

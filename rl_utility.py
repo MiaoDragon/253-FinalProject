@@ -11,14 +11,14 @@ def obs_to_state(obs_num, obs, exp):
     exp_num = len(exp)
     eff_obs_num = min(obs_num, exp_num)
     for i in range(eff_obs_num):
-        obs_list.append(exp[-i][0])
+        obs_list.append(exp[-i])
     for i in range(obs_num - eff_obs_num):
         # the rest use the initial obs
         # if exp has length 0, then just use obs
         if exp_num == 0:
             obs_list.append(obs)
         else:
-            obs_list.append(exp[0][0])
+            obs_list.append(exp[0])
     state = torch.stack(obs_list)
     return state
 
