@@ -23,9 +23,6 @@ def main(args):
     np.random.seed(seed)
     random.seed(seed)
     env = gym.make(args.env)
-    # obtain action bound
-    upper_action = env.action_space.high
-    lower_action = env.action_space.low
     # this is needed when we unnormalize the network output [0,1] to this
     # ----- metrics -----
     epi_reward = []
@@ -38,12 +35,17 @@ def main(args):
     else: # Otherwise, train on the CPU
         computing_device = torch.device("cpu")
         print("CUDA NOT supported")
+    # obtain action bound
+    upper_action = torch.from_numpy(env.action_space.high).to(computing_device)
+    lower_action = torch.from_numpy(env.action_space.low).to(computing_device)
     # ----- model & optimizer ------
     if args.use_cnn:
-        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high), use_cnn=True)
+        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high), \
+                                lower=lower_action, upper=upper_action, use_cnn=True)
     else:
         policyNet = BaselineNet(obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0], \
-                                action_dim=len(env.action_space.high), use_cnn=False)
+                                action_dim=len(env.action_space.high), use_cnn=False, \
+                                lower=lower_action, upper=upper_action)
     if os.path.exists(args.model_path):
         print('loading previous model...')
         load_net_state(policyNet, args.model_path)
@@ -83,7 +85,7 @@ def main(args):
             # unnormalize the action by bound
             #print(action)
             perform_action = action.detach().data.cpu().numpy()
-            perform_action = perform_action * (upper_action - lower_action) + lower_action
+            #perform_action = perform_action * (upper_action - lower_action) + lower_action
             log_prob = policyNet.log_prob(state, action)
             obs_next, reward, done, info = env.step(perform_action)
             R += reward

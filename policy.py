@@ -12,7 +12,7 @@ import numpy as np
 import torch.nn.functional as F
 from cnn import ResNet
 class BaselineNet(nn.Module):
-    def __init__(self, obs_num, state_dim, action_dim, use_cnn=True):
+    def __init__(self, obs_num, state_dim, action_dim, lower, upper, use_cnn=True):
         super(BaselineNet, self).__init__()
         # cnn layer for state extraction
         self.use_cnn = use_cnn
@@ -29,6 +29,7 @@ class BaselineNet(nn.Module):
         self.softplus = nn.Softplus()
         self.sigmoid = nn.Sigmoid()
         self.action_dim = action_dim
+        self.transforms = [torch.distributions.AffineTransform(loc=lower, scale=upper-lower)]
     def forward(self, s):
         if self.use_cnn:
             s = self.cnn(s)
@@ -51,7 +52,10 @@ class BaselineNet(nn.Module):
         alpha = s[...,0]
         beta = s[...,1]
         # added softplus
-        dist = torch.distributions.beta.Beta(alpha, beta)
+        dist = torch.distributions.TransformedDistribution(torch.distributions.beta.Beta(alpha, beta),
+                                                          self.transforms)
+
+
         return dist
     def explore(self, s):
         # add stochastic for exploration
@@ -59,7 +63,8 @@ class BaselineNet(nn.Module):
         alpha = s[...,0]
         beta = s[...,1]
         # added softplus
-        dist = torch.distributions.beta.Beta(alpha, beta)
+        dist = torch.distributions.TransformedDistribution(torch.distributions.beta.Beta(alpha, beta),
+                                                          self.transforms)
         return dist.sample()
     def log_prob(self, s, a):
         # given state and action, output the prob of choosing that action
@@ -69,7 +74,8 @@ class BaselineNet(nn.Module):
         # we use std=1 for simplicity
         # mean: B * Action_shape
         # a: B * action
-        dist = torch.distributions.beta.Beta(alpha, beta)
+        dist = torch.distributions.TransformedDistribution(torch.distributions.beta.Beta(alpha, beta),
+                                                          self.transforms)
         return dist.log_prob(a)
     def set_opt(self, opt=optim.Adam, lr=1e-2):
         self.opt = opt(self.parameters(), lr=lr)
