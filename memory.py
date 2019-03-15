@@ -11,7 +11,7 @@ import numpy as np
 import torch.nn.functional as F
 import scipy.signal
 from rl_utility import *
-def discount_cumsum(x, discount):
+def discount_cumsum(x, discount, direction=-1):
     """
     magic from rllab for computing discounted cumulative sums of vectors.
     input:
@@ -19,16 +19,18 @@ def discount_cumsum(x, discount):
         [x0,
          x1,
          x2]
+        direction: -1 if cummulative from back
+                   1 if cummulative from front
     output:
         [x0 + discount * x1 + discount^2 * x2,
          x1 + discount * x2,
          x2]
     ref: https://github.com/openai/spinningup/blob/master/spinup/algos/vpg/core.py
     """
-    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
+    return scipy.signal.lfilter([1], [1, float(-discount)], x[::direction], axis=0)[::direction]
 
 class Memory():
-    def __init__(self, capacity, obs_num, computing_device):
+    def __init__(self, capacity, obs_num, computing_device, importance_all=False, clipping=True):
         self.capacity = capacity
         self.idx = 0
         self.obs_num = obs_num
@@ -39,6 +41,8 @@ class Memory():
         self.log_p_list = []
         self.b = 0.
         self.computing_device = computing_device
+        self.importance_all = importance_all
+        self.clipping = clipping
     def remember(self, obs, a, r, log_p, gamma):
         # given new trajectory in the form [(s_t, a_t, r_t, log_p(a_t|s_t))]
         # add this into memory
@@ -69,7 +73,7 @@ class Memory():
         for exp_i in range(len(self.obs_list)):
             R = 0.
             sum_exp = 0.
-            bt = b / len(self.obs_list[0])
+            bt = b / len(self.obs_list[exp_i])
             # compute is for entire trajectory (is: important sampling)
             log_is = 0.
             states = []
@@ -80,7 +84,7 @@ class Memory():
 
             for t in range(len(self.obs_list[exp_i])):
                 states.append(obs_to_state(self.obs_num, self.obs_list[exp_i][t], self.obs_list[exp_i][:t])) # :t actually uses past exps
-                As.append(self.R_list[exp_i][t] - bt * (len(self.obs_list[0])-t))
+                As.append(self.R_list[exp_i][t] - bt * (len(self.obs_list[exp_i])-t))
             states = torch.stack(states)
             actions = torch.stack(self.a_list[exp_i])
             past_log_p = torch.stack(self.log_p_list[exp_i])
@@ -94,20 +98,24 @@ class Memory():
             #log_probs = net.log_prob(states, actions).sum(dim=1)
 
             log_is = (log_probs - past_log_p).detach()
-
-            log_is[log_is>np.log(10.)] = np.log(10.)  # clipping
+            if self.importance_all:
+                log_is = discount_cumsum(log_is.cpu().data.numpy(), 1., 1)
+                log_is = torch.from_numpy(log_is).type(torch.FloatTensor).to(self.computing_device)
+            if self.clipping:
+                log_is[log_is>np.log(10.)] = np.log(10.)  # clipping
             importance_w = torch.exp(log_is)
-            # clipping is
-            # ref: https://arxiv.org/pdf/1707.06347.pdf
-            importance_w[importance_w > 1+clip_upper] = 1+clip_upper
-            importance_w[importance_w < 1-clip_lower] = 1-clip_lower
+            if self.clipping:
+                # clipping is
+                # ref: https://arxiv.org/pdf/1707.06347.pdf
+                importance_w[importance_w > 1+clip_upper] = 1+clip_upper
+                importance_w[importance_w < 1-clip_lower] = 1-clip_lower
             #print('log probability:')
             #print(log_probs)
             #print('importance weight:')
             #print(importance_w)
             # take the lower bound as loss
             exp_loss = (log_probs * As * importance_w).sum()
-            exp_loss = exp_loss / len(self.obs_list[0])  # normalize to give smaller loss
+            exp_loss = exp_loss / len(self.obs_list[exp_i])  # normalize to give smaller loss
             sum_exps += exp_loss
             # print log_probs, log_is to see where it went wrong
             #print('log_probs:')

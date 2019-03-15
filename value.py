@@ -11,10 +11,10 @@ import torch.optim as optim
 import numpy as np
 import torch.nn.functional as F
 from cnn import ResNet
-class QValueNet(nn.Module):
-    # used for estimating the Q value
-    def __init__(self, obs_num, state_dim, action_dim, lower, upper, use_cnn=True):
-        super(QValueNet, self).__init__()
+class ValueNet(nn.Module):
+    # used for estimating the value
+    def __init__(self, obs_num, state_dim, lower, upper, use_cnn=True):
+        super(ValueNet, self).__init__()
         # cnn layer for state extraction
         self.use_cnn = use_cnn
         if self.use_cnn:
@@ -24,11 +24,8 @@ class QValueNet(nn.Module):
         # three layer MLP
         self.fc1 = nn.Linear(state_dim, 32)
         self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, action_dim)
+        self.fc3 = nn.Linear(64, 1)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
-        self.softplus = nn.Softplus()
-        self.sigmoid = nn.Sigmoid()
-        self.action_dim = action_dim
     def forward(self, s):
         if self.use_cnn:
             s = self.cnn(s)

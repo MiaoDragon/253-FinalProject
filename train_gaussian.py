@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import torch.nn.functional as F
-from policy import BaselineNet
+from policy_gaussian import BaselineNet
 from memory import Memory
 import argparse
 import gym
@@ -58,10 +58,14 @@ def main(args):
         epi_reward += old_epi_reward
         train_loss += old_train_loss
 
-    memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device, \
+    memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device,
                     importance_all=args.importance_all, clipping=args.clipping)
     # --- standard deviation for random sampling ---
     total_reward = 0.
+    std = args.init_std
+    std_decay = (args.init_std - args.final_std) / (args.std_decay_epi * args.max_epi)
+    std_decay_num = int(args.std_decay_epi * args.max_epi)
+    policyNet.set_std(std)
     # may consider adding random generation of data
     for i_episode in range(args.max_epi):
         obs = env.reset()
@@ -113,6 +117,10 @@ def main(args):
         # save reward and loss
         epi_reward.append(R)
         train_loss.append(J.detach().data.item())
+        if i_episode < std_decay_num-1:
+            std = std - std_decay
+            policyNet.set_std(std)
+            print('std: %f' % (std))
 
         # print the thing
         sys.stdout.flush()
@@ -136,7 +144,10 @@ parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--use_cnn', type=int, default=True)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
-parser.add_argument('--gamma', type=float, default=0.99)
+parser.add_argument('--gamma', type=float, default=1.)
+parser.add_argument('--init_std', type=float, default=5.)
+parser.add_argument('--final_std', type=float, default=.1)
+parser.add_argument('--std_decay_epi', type=float, default=.7)
 parser.add_argument('--importance_all', type=int, default=0)
 parser.add_argument('--clipping', type=int, default=1)
 args = parser.parse_args()
