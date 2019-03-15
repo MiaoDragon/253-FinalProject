@@ -28,7 +28,7 @@ def main(args):
     epi_reward = []
     train_loss = []
     # ----- cuda gpu -----
-    use_cuda = torch.cuda.is_available()
+    use_cuda = torch.cuda.is_available() and args.use_cuda
     if use_cuda:
         computing_device = torch.device("cuda")
         print("CUDA is supported")
@@ -74,8 +74,9 @@ def main(args):
         for i in range(args.max_iter):
             #print('iteration: %d' % (i))
             if args.use_cnn:
-                obs = env.render(mode='rgb_array')
-                obs = preprocess(obs)  # for image, use this
+                # obs = env.render(mode='state_pixels')
+                # obs = preprocess(obs)  # for image, use this
+                obs = obs[...,:3] @ [0.299, 0.587, 0.114] / 255.
             #cv2.imshow('hi', obs)
             obs = torch.FloatTensor(obs)
             obs = obs.to(computing_device)
@@ -125,13 +126,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--max_epi', type=int, default=1000)
 parser.add_argument('--max_iter', type=int, default=1000)
-parser.add_argument('--save_epi', type=int, default=100)
+parser.add_argument('--save_epi', type=int, default=1)
 parser.add_argument('--memory_capacity', type=int, default=100)
 parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--obs_num', type=int, default=4)
-parser.add_argument('--model_path', type=str, default='../model/baseline.pkl')
+parser.add_argument('--model_path', type=str, default='model/baseline.pkl')
 parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--use_cnn', type=int, default=True)
+parser.add_argument('--use_cuda', type=int, default=True)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
 parser.add_argument('--gamma', type=float, default=0.99)
