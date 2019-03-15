@@ -23,11 +23,9 @@ class BaselineNet(nn.Module):
         # three layer MLP
         self.fc1 = nn.Linear(state_dim, 32)
         self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, 128)
-        self.fc4 = nn.Linear(128, 2*action_dim)
+        self.fc3 = nn.Linear(64, action_dim)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
-        self.softplus = nn.Softplus()
-        self.sigmoid = nn.Sigmoid()
+        self.softmax = nn.Softmax()
         self.action_dim = action_dim
     def forward(self, s):
         if self.use_cnn:
@@ -35,41 +33,27 @@ class BaselineNet(nn.Module):
         s = s.view(len(s), -1)  # concatenate obs in Pandulum example
         s = F.relu(self.fc1(s))
         s = F.relu(self.fc2(s))
-        s = F.relu(self.fc3(s))
-        s = self.fc4(s)  # hamiltonina
-        s = s.view(len(s), self.action_dim, 2)
+        s = self.fc3(s)  # hamiltonina
         #s = F.softmax(s)
         # this to make sure the output is larger than 1
-        #s = self.softplus(s) + 1e-5
-        s = self.sigmoid(s) * 50 + 2
+        s = self.softmax(s)
         #print(s)
         return s
 
-    def distribution(self, s):
-        # return the distribution obtained from input
-        s = self(s)
-        alpha = s[...,0]
-        beta = s[...,1]
-        # added softplus
-        dist = torch.distributions.beta.Beta(alpha, beta)
-        return dist
     def explore(self, s):
         # add stochastic for exploration
         s = self(s)
-        alpha = s[...,0]
-        beta = s[...,1]
-        # added softplus
-        dist = torch.distributions.beta.Beta(alpha, beta)
-        return dist.sample()
+        return torch.multinomial(s, len(s))
     def log_prob(self, s, a):
         # given state and action, output the prob of choosing that action
-        s = self(s)
-        alpha = s[...,0]
-        beta = s[...,1]
-        # we use std=1 for simplicity
-        # mean: B * Action_shape
-        # a: B * action
-        dist = torch.distributions.beta.Beta(alpha, beta)
-        return dist.log_prob(a)
+        pred = self(s)
+        #print('probability:')
+        #print(pred)
+        #print('action:')
+        #print(a)
+        #print('selected prob:')
+        #print(torch.gather(pred, 1, a))
+        return torch.log(torch.gather(pred, 1, a))
+
     def set_opt(self, opt=optim.Adam, lr=1e-2):
         self.opt = opt(self.parameters(), lr=lr)

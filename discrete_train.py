@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import torch.nn.functional as F
-from policy import BaselineNet
+from discrete_policy import BaselineNet
 from memory import Memory
 import argparse
 import gym
@@ -24,8 +24,8 @@ def main(args):
     random.seed(seed)
     env = gym.make(args.env)
     # obtain action bound
-    upper_action = env.action_space.high
-    lower_action = env.action_space.low
+    #upper_action = env.action_space.high
+    #lower_action = env.action_space.low
     # this is needed when we unnormalize the network output [0,1] to this
     # ----- metrics -----
     epi_reward = []
@@ -40,10 +40,10 @@ def main(args):
         print("CUDA NOT supported")
     # ----- model & optimizer ------
     if args.use_cnn:
-        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high), use_cnn=True)
+        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=env.action_space.n, use_cnn=True)
     else:
         policyNet = BaselineNet(obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0], \
-                                action_dim=len(env.action_space.high), use_cnn=False)
+                                action_dim=env.action_space.n, use_cnn=False)
     if os.path.exists(args.model_path):
         print('loading previous model...')
         load_net_state(policyNet, args.model_path)
@@ -82,9 +82,9 @@ def main(args):
             action = action[0]
             # unnormalize the action by bound
             #print(action)
-            perform_action = action.detach().data.cpu().numpy()
-            perform_action = perform_action * (upper_action - lower_action) + lower_action
-            log_prob = policyNet.log_prob(state, action)
+            perform_action = action.detach().data.cpu().item()
+            #perform_action = perform_action * (upper_action - lower_action) + lower_action
+            log_prob = policyNet.log_prob(state, action.unsqueeze(0))
             obs_next, reward, done, info = env.step(perform_action)
             R += reward
             obs = obs.detach()
@@ -120,16 +120,16 @@ def main(args):
 
 parser = argparse.ArgumentParser()
 #parser.add_argument('--env', type=str, default='CarRacing-v0')
-parser.add_argument('--env', type=str, default='CarRacing-v0')
+parser.add_argument('--env', type=str, default='CartPole-v0')
 parser.add_argument('--max_epi', type=int, default=1000)
 parser.add_argument('--max_iter', type=int, default=1000)
 parser.add_argument('--save_epi', type=int, default=100)
 parser.add_argument('--memory_capacity', type=int, default=100)
 parser.add_argument('--learning_rate', type=float, default=0.001)
-parser.add_argument('--obs_num', type=int, default=4)
+parser.add_argument('--obs_num', type=int, default=1)
 parser.add_argument('--model_path', type=str, default='../model/baseline.pkl')
 parser.add_argument('--seed', type=int, default=1)
-parser.add_argument('--use_cnn', type=int, default=True)
+parser.add_argument('--use_cnn', type=int, default=False)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
 parser.add_argument('--gamma', type=float, default=0.99)

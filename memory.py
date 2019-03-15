@@ -78,7 +78,7 @@ class Memory():
             As = []
             # check if q is None, if so, then calculate q for each exp
 
-            for t in range(len(self.obs_list[0])):
+            for t in range(len(self.obs_list[exp_i])):
                 states.append(obs_to_state(self.obs_num, self.obs_list[exp_i][t], self.obs_list[exp_i][:t])) # :t actually uses past exps
                 As.append(self.R_list[exp_i][t] - bt * (len(self.obs_list[0])-t))
             states = torch.stack(states)
@@ -89,9 +89,8 @@ class Memory():
             actions = actions.to(self.computing_device)
             past_log_p = past_log_p.to(self.computing_device)
             As = As.to(self.computing_device)
-            dist = net.distribution(states)
             # sum probabiliies to obtain joint probaility
-            log_probs = dist.log_prob(actions).sum(dim=1)
+            log_probs = net.log_prob(states, actions).sum(dim=1)
             #log_probs = net.log_prob(states, actions).sum(dim=1)
 
             log_is = (log_probs - past_log_p).detach()
