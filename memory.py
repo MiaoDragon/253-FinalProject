@@ -95,6 +95,7 @@ class Memory():
             As = As.to(self.computing_device)
             # sum probabiliies to obtain joint probaility
             log_probs = net.log_prob(states, actions).sum(dim=1)
+            log_probs[log_probs==-np.inf] = np.log(1e-35)
             #log_probs = net.log_prob(states, actions).sum(dim=1)
             log_is = (log_probs - past_log_p).detach()
             if self.importance_all:
@@ -112,8 +113,11 @@ class Memory():
             #print(log_probs)
             #print('importance weight:')
             #print(importance_w)
+            #print('As:')
+            #print(As)
             # take the lower bound as loss
             exp_loss = (log_probs * As * importance_w).sum()
+            #print(exp_loss)
             exp_loss = exp_loss / len(self.obs_list[exp_i])  # normalize to give smaller loss
             sum_exps += exp_loss
             # print log_probs, log_is to see where it went wrong

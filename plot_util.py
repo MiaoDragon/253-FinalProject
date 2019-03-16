@@ -12,10 +12,10 @@ def _convert_to_xy(data):
     if isinstance(data, dict):
         x,y = zip(*(sorted(data.items())))
     elif isinstance(data, list):
-        x = np.arange(n)+1
+        x = np.arange(len(data))+1
         y = data
     elif isinstance(data, np.ndarray):
-        x = np.arange(n)+1
+        x = np.arange(len(data))+1
         y = list(data) # Assume 1D
     return (x,y)
 
@@ -25,8 +25,8 @@ def _convert_to_xy(data):
 def plot(epi_reward, train_loss, name=None):
     fig = plt.figure(figsize=(8,4), dpi=80)
     ax = fig.add_subplot(111)
-    title = 'loss over epochs'
-    xlabel, ylabel = 'epochs', 'loss'
+    title = 'rewards over episodes'
+    xlabel, ylabel = 'episodes', 'rewards'
     nbins = 10
 
     ax.set_title(title)
@@ -36,15 +36,23 @@ def plot(epi_reward, train_loss, name=None):
     x,y = _convert_to_xy(epi_reward)
     plt.plot(x,y,label='episode reward')
     n = max(x)
+    """
+    ax = fig.add_subplot(212)
+    title = 'loss over episodes'
+    xlabel, ylabel = 'episodes', 'loss'
+    nbins = 10
 
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
     x,y = _convert_to_xy(train_loss)
     plt.plot(x,y,label='training loss')
     n = max(max(x),n)
-
+    """
     ticks = (np.arange(nbins) + 1) * n//nbins
     plt.xticks(ticks)
 
-    ax.set_ylim(bottom=0)
+    #ax.set_ylim(bottom=0)
     ax.margins(0)
     ax.legend()
 
