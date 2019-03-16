@@ -96,7 +96,6 @@ class Memory():
             # sum probabiliies to obtain joint probaility
             log_probs = net.log_prob(states, actions).sum(dim=1)
             #log_probs = net.log_prob(states, actions).sum(dim=1)
-
             log_is = (log_probs - past_log_p).detach()
             if self.importance_all:
                 log_is = discount_cumsum(log_is.cpu().data.numpy(), 1., 1)

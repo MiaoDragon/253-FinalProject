@@ -56,7 +56,8 @@ def main(args):
         epi_reward += old_epi_reward
         train_loss += old_train_loss
 
-    memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device)
+    memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device, \
+                    importance_all=args.importance_all, clipping=args.clipping)
     # --- standard deviation for random sampling ---
     total_reward = 0.
     # may consider adding random generation of data
@@ -133,5 +134,7 @@ parser.add_argument('--use_cnn', type=int, default=False)
 parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
 parser.add_argument('--gamma', type=float, default=0.99)
+parser.add_argument('--importance_all', type=int, default=0)
+parser.add_argument('--clipping', type=int, default=1)
 args = parser.parse_args()
 reward_list = main(args)

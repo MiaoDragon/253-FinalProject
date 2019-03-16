@@ -65,7 +65,9 @@ class BaselineNet(nn.Module):
         # added softplus
         dist = torch.distributions.TransformedDistribution(torch.distributions.beta.Beta(alpha, beta),
                                                           self.transforms)
-        return dist.sample()
+        action = dist.sample()
+        prob = dist.log_prob(action)
+        return action, prob
     def log_prob(self, s, a):
         # given state and action, output the prob of choosing that action
         s = self(s)

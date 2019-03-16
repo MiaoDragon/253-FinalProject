@@ -77,33 +77,31 @@ def main(args):
         r_list = []
         log_prob_list = []
         value_list = []
-        for i in range(args.max_iter):
-            #print('iteration: %d' % (i))
-            if args.use_cnn:
-                obs = env.render(mode='rgb_array')
-                obs = preprocess(obs)  # for image, use this
-            #cv2.imshow('hi', obs)
-            obs = torch.FloatTensor(obs)
-            obs = obs.to(computing_device)
-            state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
-            action = policyNet.explore(state)
-            action = action[0]
-            # unnormalize the action by bound
-            #print(action)
-            perform_action = action.detach().data.cpu().numpy()
-            #perform_action = perform_action * (upper_action - lower_action) + lower_action
-            log_prob = policyNet.log_prob(state, action)
-            obs_next, reward, done, info = env.step(perform_action)
-            R += reward
-            obs = obs.detach()
-            # sum each dim of log_prob to get joint prob
-            obs_list.append(obs)
-            a_list.append(action)
-            r_list.append(reward)
-            log_prob_list.append(log_prob.detach().data.sum())
-            obs = obs_next
-            if done:
-                break
+        with torch.no_grad():
+            for i in range(args.max_iter):
+                #print('iteration: %d' % (i))
+                if args.use_cnn:
+                    obs = env.render(mode='rgb_array')
+                    obs = preprocess(obs)  # for image, use this
+                obs = torch.FloatTensor(obs)
+                obs = obs.to(computing_device)
+                state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
+                action, log_prob = policyNet.explore(state)
+                action = action[0]
+                log_prob = log_prob[0]
+                # unnormalize the action by bound
+                #print(action)
+                perform_action = action.data.cpu().numpy()
+                obs_next, reward, done, info = env.step(perform_action)
+                R += reward
+                # sum each dim of log_prob to get joint prob
+                obs_list.append(obs)
+                a_list.append(action)
+                r_list.append(reward)
+                log_prob_list.append(log_prob.data.sum())
+                obs = obs_next
+                if done:
+                    break
         memory.remember(obs_list, a_list, r_list, log_prob_list, args.gamma)
         print('reward for episode %d: %f' % (i_episode, R))
         total_reward += R
