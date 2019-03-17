@@ -19,10 +19,16 @@ def _convert_to_xy(data):
         y = list(data) # Assume 1D
     return (x,y)
 
+def running_mean(x, N):
+    cumsum = np.cumsum(np.insert(x, 0, 0))
+    prefix = np.array([sum(x[:i+1])/len(x[:i+1]) for i in range(N-1)])
+    smoothed = (cumsum[N:] - cumsum[:-N]) / float(N)
+    return np.concatenate((prefix, smoothed))
+
 # Data params should be lists or 1D arrays or dicts. `name` is a string
 # identifier for the output figure PNG; if not provided, it will default to
 # using the current datetime.
-def plot(epi_reward, train_loss, name=None):
+def plot(epi_reward, train_loss, name=None, smooth=False):
     fig = plt.figure(figsize=(8,4), dpi=80)
     ax = fig.add_subplot(111)
     title = 'rewards over episodes'
@@ -34,6 +40,8 @@ def plot(epi_reward, train_loss, name=None):
     ax.set_ylabel(ylabel)
 
     x,y = _convert_to_xy(epi_reward)
+    if smooth:
+        y = running_mean(y, 100)
     plt.plot(x,y,label='episode reward')
     n = max(x)
     """
