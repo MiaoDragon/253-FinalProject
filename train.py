@@ -28,7 +28,7 @@ def main(args):
     epi_reward = []
     train_loss = []
     # ----- cuda gpu -----
-    use_cuda = torch.cuda.is_available()
+    use_cuda = torch.cuda.is_available() and args.use_cuda
     if use_cuda:
         computing_device = torch.device("cuda")
         print("CUDA is supported")
@@ -72,31 +72,40 @@ def main(args):
         a_list = []
         r_list = []
         log_prob_list = []
+        
+        #HEAD
         value_list = []
         with torch.no_grad():
             for i in range(args.max_iter):
-                #print('iteration: %d' % (i))
-                if args.use_cnn:
-                    obs = env.render(mode='rgb_array')
-                    obs = preprocess(obs)  # for image, use this
-                #cv2.imshow('hi', obs)
-                obs = torch.FloatTensor(obs)
-                obs = obs.to(computing_device)
-                state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
-                action, log_prob = policyNet.explore(state)
-                action = action[0]
-                log_prob = log_prob[0]
-                # unnormalize the action by bound
-                #print(action)
-                perform_action = action.data.cpu().numpy()
-                obs_next, reward, done, info = env.step(perform_action)
-                R += reward
-                # sum each dim of log_prob to get joint prob
-                obs_list.append(obs)
-                a_list.append(action)
-                r_list.append(reward)
-                log_prob_list.append(log_prob.data.sum())
-                obs = obs_next
+                if i % args.frame_interval == 0:
+                    #print('iteration: %d' % (i))
+                    if args.use_cnn:
+                        # obs = env.render(mode='state_pixels')
+                        # obs = preprocess(obs)  # for image, use this
+                        obs = obs[...,:3] @ [0.299, 0.587, 0.114] / 255.
+                    #cv2.imshow('hi', obs)
+                    obs = torch.FloatTensor(obs)
+                    obs = obs.to(computing_device)
+                    state = obs_to_state(args.obs_num, obs, obs_list).unsqueeze(0)
+                    action, log_prob = policyNet.explore(state)
+                    action = action[0]
+                    log_prob = log_prob[0]
+                    # unnormalize the action by bound
+                    #print(action)
+                    perform_action = action.data.cpu().numpy()
+                    obs_next, reward, done, info = env.step(perform_action)
+                    R += reward
+                    # sum each dim of log_prob to get joint prob
+                    obs_list.append(obs)
+                    a_list.append(action)
+                    r_list.append(reward)
+                    log_prob_list.append(log_prob.data.sum())
+                    obs = obs_next
+                else:
+                    obs_next, reward, done, info = env.step(perform_action)
+                    obs = obs_next
+                    R += reward
+                    r_list[-1] += reward
                 if done:
                     break
         memory.remember(obs_list, a_list, r_list, log_prob_list, args.gamma)
@@ -126,17 +135,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--max_epi', type=int, default=1000)
 parser.add_argument('--max_iter', type=int, default=1000)
-parser.add_argument('--save_epi', type=int, default=100)
+parser.add_argument('--save_epi', type=int, default=1)
 parser.add_argument('--memory_capacity', type=int, default=100)
 parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--obs_num', type=int, default=4)
-parser.add_argument('--model_path', type=str, default='../model/baseline.pkl')
+parser.add_argument('--model_path', type=str, default='model/baseline.pkl')
 parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--use_cnn', type=int, default=True)
-parser.add_argument('--clip_upper', type=float, default=0.5, help='this makes sure the importance factor is within 1-alpha to 1+alpha')
-parser.add_argument('--clip_lower', type=float, default=1., help='this makes sure the importance factor is not smaller than 0')
+parser.add_argument('--use_cuda', type=int, default=True)
+parser.add_argument('--clip_upper', type=float, default=0.5,
+                    help='this makes sure the importance factor is within 1-alpha to 1+alpha')
+parser.add_argument('--clip_lower', type=float, default=1.,
+                    help='this makes sure the importance factor is not smaller than 0')
 parser.add_argument('--gamma', type=float, default=0.99)
 parser.add_argument('--importance_all', type=int, default=0)
 parser.add_argument('--clipping', type=int, default=1)
+parser.add_argument('--frame_interval', type=int, default=1,
+                    help='frequency in frames at which to sample actions; defaults to 1 (sample every frame)')
 args = parser.parse_args()
 reward_list = main(args)
