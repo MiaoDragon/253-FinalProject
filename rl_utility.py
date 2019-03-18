@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from scipy.misc import imresize
+
 def obs_to_state(obs_num, obs, exp):
     # exp is a list of past experiences in the form (obs, action, reward, log_prob) up to previous time
     # each obs is a tensor

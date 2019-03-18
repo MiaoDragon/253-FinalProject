@@ -42,12 +42,14 @@ def main(args):
     if args.use_cnn:
         policyNet = BaselineNet(
             obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high),
-            lower=lower_action, upper=upper_action, use_cnn=True)
+            lower=lower_action, upper=upper_action, use_cnn=True,
+            distribution=args.distribution)
     else:
         policyNet = BaselineNet(
             obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0],
             action_dim=len(env.action_space.high), use_cnn=False,
-            lower=lower_action, upper=upper_action)
+            lower=lower_action, upper=upper_action,
+            distribution=args.distribution)
 
     if os.path.exists(args.model_path):
         print('loading previous model...')

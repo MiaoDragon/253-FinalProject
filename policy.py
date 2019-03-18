@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import torch.nn.functional as F
-from cnn import ResNet
+from cnn import CNN #, ResNet
 
 
 # We should probably use inheritance, especially if this gets more complicated
@@ -41,20 +41,21 @@ class BaselineNet(nn.Module):
         self.dist = distribution
         self.param_count, self.distribution = distributions[distribution]
         # bind ("fake method")
-        self.distribution = lambda s: self.distribution(self, s)
+        # self.distribution = lambda s: self.distribution(self, s)
         # this is only for gaussians right now
         self.std = 1.
 
         # cnn layer for state extraction
         self.use_cnn = use_cnn
         if self.use_cnn:
-            self.cnn = ResNet(in_channel=obs_num, out_size=state_dim)
+            #self.cnn = ResNet(in_channel=obs_num, out_size=state_dim)
+            self.cnn = CNN(obs_num, state_dim)
         else:
             self.cnn = None
         # three layer MLP
         self.fc1 = nn.Linear(state_dim, 32)
         self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, param_count*action_dim)
+        self.fc3 = nn.Linear(64, self.param_count*action_dim)
         self.opt = optim.Adam(self.parameters(), lr=1e-3)
         self.softplus = nn.Softplus()
         self.sigmoid = nn.Sigmoid()
@@ -75,7 +76,7 @@ class BaselineNet(nn.Module):
 
         # Reshape for convenience
         if self.param_count > 1:
-            s = s.view(len(s), self.action_dim, param_count)
+            s = s.view(len(s), self.action_dim, self.param_count)
         else:
             s = s.view(len(s), self.action_dim)
 
@@ -86,13 +87,13 @@ class BaselineNet(nn.Module):
         return s
 
     def explore(self, s):
-        dist = self.distribution(s)
+        dist = self.distribution(self, s)
         action = dist.sample()
         prob = dist.log_prob(action)
         return action, prob
 
     def log_prob(self, s, a):
-        dist = self.distribution(s)
+        dist = self.distribution(self, s)
         return dist.log_prob(a)
 
     def set_opt(self, opt=optim.Adam, lr=1e-2):
