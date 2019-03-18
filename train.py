@@ -40,12 +40,15 @@ def main(args):
     lower_action = torch.from_numpy(env.action_space.low).to(computing_device)
     # ----- model & optimizer ------
     if args.use_cnn:
-        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high), \
-                                lower=lower_action, upper=upper_action, use_cnn=True)
+        policyNet = BaselineNet(
+            obs_num=args.obs_num, state_dim=64, action_dim=len(env.action_space.high),
+            lower=lower_action, upper=upper_action, use_cnn=True)
     else:
-        policyNet = BaselineNet(obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0], \
-                                action_dim=len(env.action_space.high), use_cnn=False, \
-                                lower=lower_action, upper=upper_action)
+        policyNet = BaselineNet(
+            obs_num=args.obs_num, state_dim=args.obs_num*env.observation_space.shape[0],
+            action_dim=len(env.action_space.high), use_cnn=False,
+            lower=lower_action, upper=upper_action)
+
     if os.path.exists(args.model_path):
         print('loading previous model...')
         load_net_state(policyNet, args.model_path)
@@ -58,10 +61,17 @@ def main(args):
         epi_reward += old_epi_reward
         train_loss += old_train_loss
 
-    memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device, \
+    memory = Memory(capacity=args.memory_capacity, obs_num=args.obs_num, computing_device=computing_device,
                     importance_all=args.importance_all, clipping=args.clipping)
     # --- standard deviation for random sampling ---
     total_reward = 0.
+
+    if args.distribution == 'gaussian':
+        std = args.init_std
+        std_decay = (args.init_std - args.final_std) / (args.std_decay_epi * args.max_epi)
+        std_decay_num = int(args.std_decay_epi * args.max_epi)
+        policyNet.set_std(std)
+
     # may consider adding random generation of data
     for i_episode in range(args.max_epi):
         obs = env.reset()
@@ -122,6 +132,12 @@ def main(args):
         epi_reward.append(R)
         train_loss.append(J.detach().data.item())
 
+        # std decay for gaussian
+        if args.distribution == 'gaussian' and i_episode < std_decay_num-1:
+            std = std - std_decay
+            policyNet.set_std(std)
+            print('std: %f' % (std))
+
         # print the thing
         sys.stdout.flush()
         # save model after several epochs
@@ -135,7 +151,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, default='CarRacing-v0')
 parser.add_argument('--max_epi', type=int, default=1000)
 parser.add_argument('--max_iter', type=int, default=1000)
-parser.add_argument('--save_epi', type=int, default=1)
+parser.add_argument('--save_epi', type=int, default=100)
 parser.add_argument('--memory_capacity', type=int, default=100)
 parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--obs_num', type=int, default=4)
@@ -147,10 +163,19 @@ parser.add_argument('--clip_upper', type=float, default=0.5,
                     help='this makes sure the importance factor is within 1-alpha to 1+alpha')
 parser.add_argument('--clip_lower', type=float, default=1.,
                     help='this makes sure the importance factor is not smaller than 0')
-parser.add_argument('--gamma', type=float, default=0.99)
+parser.add_argument('--gamma', type=float, default=1.)
 parser.add_argument('--importance_all', type=int, default=0)
 parser.add_argument('--clipping', type=int, default=1)
 parser.add_argument('--frame_interval', type=int, default=1,
                     help='frequency in frames at which to sample actions; defaults to 1 (sample every frame)')
+
+parser.add_argument('--distribution', type=str, default='gaussian',
+                    help='see policy.py for available distributions')
+
+# Gaussian-only args
+parser.add_argument('--init_std', type=float, default=5.)
+parser.add_argument('--final_std', type=float, default=.1)
+parser.add_argument('--std_decay_epi', type=float, default=.7)
+
 args = parser.parse_args()
 reward_list = main(args)

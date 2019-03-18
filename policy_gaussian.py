@@ -30,9 +30,6 @@ class BaselineNet(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.tanh = nn.Tanh()
         self.action_dim = action_dim
-        #self.transforms = [torch.distributions.AffineTransform(loc=lower, scale=upper-lower)]
-        self.transforms = transforms = [torch.distributions.SigmoidTransform(), \
-                                        torch.distributions.AffineTransform(loc=lower, scale=upper-lower)]
     def forward(self, s):
         if self.use_cnn:
             s = self.cnn(s)
@@ -53,11 +50,7 @@ class BaselineNet(nn.Module):
     def distribution(self, s):
         # return the distribution obtained from input
         s = self(s)
-        alpha = s[...,0]
-        beta = s[...,1]
-        # added softplus
         dist = torch.distributions.normal.Normal(loc=s, scale=self.std)
-        #dist = torch.distributions.transformed_distribution.TransformedDistribution(dist, self.transforms)
         return dist
     def explore(self, s):
         # add stochastic for exploration
@@ -77,7 +70,6 @@ class BaselineNet(nn.Module):
         # mean: B * Action_shape
         # a: B * action
         dist = torch.distributions.normal.Normal(loc=s, scale=self.std)
-        #dist = torch.distributions.transformed_distribution.TransformedDistribution(dist, self.transforms)
         return dist.log_prob(a)
     def set_opt(self, opt=optim.Adam, lr=1e-2):
         self.opt = opt(self.parameters(), lr=lr)
